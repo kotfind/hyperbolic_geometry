@@ -2,7 +2,9 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 using namespace glm;
 
 #include <iostream>
@@ -29,11 +31,21 @@ vec3 hline(vec2 a, vec2 b) {
     return vec3(o, length(o - a));
 }
 
+vec3 line(const vec2 a, const vec2 b) { return vec3(a.y - b.y, b.x - a.x, a.x*b.y - b.x*a.y); }
+
 void mainpart() {
     // Get uniform locations
     GLuint uTime = glGetUniformLocation(program, "time");
     GLuint uResolution = glGetUniformLocation(program, "resolution");
-    GLuint uCircle = glGetUniformLocation(program, "circles");
+
+    GLuint uPoints = glGetUniformLocation(program, "points");
+    GLuint uPointsSize = glGetUniformLocation(program, "pointsSize");
+
+    GLuint uCircles = glGetUniformLocation(program, "circles");
+    GLuint uCirclesSize = glGetUniformLocation(program, "circlesSize");
+
+    GLuint uLines = glGetUniformLocation(program, "lines");
+    GLuint uLinesSize = glGetUniformLocation(program, "linesSize");
 
     // Mainloop
     SDL_Event e;
@@ -57,8 +69,34 @@ void mainpart() {
         glUniform2i(uResolution, W, H);
 
         // Set the cicles uniform
-        vec3 circle = hline(vec2(0.4, -0.1), vec2(0.3, -0.6));
-        glUniform3f(uCircle, circle.x, circle.y, circle.z);
+        vec2 points[] = {
+            vec2(0.4, -0.1), vec2(0.3, -0.6),
+            vec2(0.2, -0.3), vec2(0.3,  0.5),
+            vec2(0.1, -0.1), vec2(0.6, -0.6),
+        };
+        int pointsSize = sizeof(points) / sizeof(points[0]);
+
+        int circlesSize = 0;
+        int linesSize = 0;
+        vec3 circles[100];
+        vec3 lines[100];
+
+        for (int i = 0; i + 1 < pointsSize; i += 2) {
+            if (pseudoscalar(points[i], points[i + 1]) == 0)
+                lines[linesSize++] = line(points[i], points[i + 1]);
+            else
+                circles[circlesSize++] = hline(points[i], points[i + 1]);
+        }
+
+        glUniform2fv(uPoints, pointsSize, value_ptr(points[0]));
+        glUniform1i(uPointsSize, pointsSize);
+
+        glUniform3fv(uCircles, circlesSize, value_ptr(circles[0]));
+        glUniform1i(uCirclesSize, circlesSize);
+
+        glUniform3fv(uLines, linesSize, value_ptr(lines[0]));
+        glUniform1i(uLinesSize, linesSize);
+
 
         glClear(GL_COLOR_BUFFER_BIT);
         glRectf(-1., -1., 1., 1.);
